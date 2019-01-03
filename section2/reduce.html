@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    
+</body>
+</html>
+<script>
+
+//reduce() 数组中的每个值（从左到右）开始合并，最终为一个值。
+    let arr = [1,11,23,456];
+
+    let result = arr.reduce(function (emp,item,index) {
+        console.log(emp)
+        return emp + item;
+    })
+    console.log(result)
+    
+//箭头函数格式
+    let result = arr.reduce((emp,item,index) =>emp + item);
+    console.log(result)
+
+</script>
+
