@@ -1,0 +1,253 @@
+AMD规范与CMD规范的区别是什么？
+AMD规范：是 RequireJS 在推广过程中对模块定义的规范化产出的，
+而CMD规范：是SeaJS 在推广过程中对模块定义的规范化产出的。
+
+
+1. CMD依赖就近：比如如下代码
+
+define(function(require,exports,module){  
+        var a = require('./a');  
+        a.doSomthing();  
+});
+   代码在运行时，首先是不知道依赖的，需要遍历所有的require关键字，找出后面的依赖。具体做法是将function toString后，用正则匹配出require关键字后面的依赖。
+
+　  而AMD依赖前置：如下代码：
+
+define(['./a','./b'],function(a,b){  
+       //......  
+       a.doSomthing();  
+       //......  
+       b.doSomthing();  
+})  
+
+   代码在一旦运行到此处，能立即知晓依赖。而无需遍历整个函数体找到它的依赖，因此性能有所提升，缺点就是开发者必须显式得指明依赖——这会使得开发工作量变大，比如：当依赖项有n个时候 那么写起来比较烦 且容易出错。不过 RequireJS 从 2.0 开始，也改成可以延迟执行（根据写法不同，处理方式不同）。
+
+2. 执行顺序上：
+
+  CMD是延迟执行的，而AMD是提前执行的。
+
+3. api设计角度：
+
+  AMD 的 API 默认是一个当多个用，CMD 的 API 严格区分，推崇职责单一。比如 AMD 里，require 分全局 require 和局部 require，都叫 require。CMD 里，没有全局 require，而是根据模块系统的完备性，提供 seajs.use 来实现模块系统的加载启动。CMD 里，每个 API 都简单纯粹。
+
+---------------------------------------------------------------------------------------
+  -----什么是CMD规范？
+
+  在CMD中 一个模块就是一个文件，如下代码所示：
+
+//基本格式如：define(id, deps, factory)
+// 比如如下代码
+define('hello',['jQuery'],function(require, exports, module) {
+  // 模块代码
+});
+  define是一个全局函数，主要是用来定于模块的。其中如上'hello'就是模块名称，['jquery']是依赖项，也可以依赖于多项可以如下写法['jquery','',''],分别用逗号隔开，其中上面的id(模块名称)和deps(被依赖项) 是可以省略的。省略时，那么模块名称就是文件名称。比如我有个文件叫a.js,那么我定义模块时候如下代码所示：
+define(function(require, exports, module) {
+  // 模块代码
+});
+
+  那么如果我想在b.js代码里面要依赖于a.js的话，那么我可以直接这样写:
+define(function(require,exports,module){ var a = require('a')});
+
+  但是注意：带有id 和 deps 是不属于CMD规范的。所以在seaJS里面 一般的写法是不带模块名称和依赖项的。就是如上的代码格式。
+
+  下面看看 factory  在seajs里面 factory既可以是函数，对象或者字符串。factory为对象 字符串时候，表示该模块的接口就是该对象或者字符串，如下可以定义一个json对象。
+
+  define({"aa":'bb'})；和jsonp格式类似，不过这样的数据对象是高度可用的，而且因为是静态对象，他也是CDN友好的，可以提高性能，比如说我们有个省市区这么一个jSON格式要返回我们前端，如果以传统JSONP的形式提供给客户端，它必须提供一个callback函数名，根据这个函数名动态生成返回数据，这使得标准JSONP数据一定不是CDN友好的。那么我们可以利用这种格式
+define({  
+    provinces: [
+    {
+        name: '上海', 
+        areas: ['浦东新区', '徐汇区']},
+    {
+        name: '江苏', 
+        cities: ['南京', '南通']}
+        //.....  
+    ]
+});
+   假设这个文件名为china.js，那么如果某个模块需要这个数据，只需要：
+define(function(require,exports,module){
+     var china = require('./china');
+    //在这里使用中国省市数据
+});
+   当factory为函数时，表示该模块的构造方法，执行该构造方法，可以得到模块向外提供的接口。默认会传入三个参数require,exports,module.那么我们先来看看require参数吧！
+
+  ----require:
+
+ require是一个方法，他可以解决依赖，用于获取其他模块提供的接口，比如下面的a.js代码如下
+　　define(function(require, exports) {
+　　　　exports.a = function(){
+　　　　// 很多代码	
+　　　　};
+　　});
+   那么现在我想在b.js里面调用a.js里面的a方法。我们可以如下做：
+   define(function(require,exports){
+
+        var fun = require('./a');
+
+　　　　console.log(fun.a()); // 就可以调用到及执行a函数了。
+
+   })
+
+  ----require.async(id,callback) :
+
+   require.async: 方法用来在模块内部异步加载模块，并在加载完成后执行指定回调。callback参数可选。比如如下代码：
+define(function(require, exports, module) {
+
+  // 异步加载一个模块，在加载完成时，执行回调
+  require.async('./b', function(b) {
+    b.doSomething();
+  });
+
+  // 异步加载多个模块，在加载完成时，执行回调
+  require.async(['./c', './d'], function(c, d) {
+    c.doSomething();
+    d.doSomething();
+  });
+
+});
+注意： require是同步往下执行的，而require.async 则是异步回调执行。
+--------------------------------------------------------------------
+  ----require.resolve(id)
+
+  使用模块系统内部的路径解析机制来解析并返回模块路径。该函数不会加载模块，只返回解析后的绝对路径。
+define(function(require, exports) {
+
+  console.log(require.resolve('./b'));
+  // ==> http://example.com/path/to/b.js
+
+});
+
+  -----exports:exports:是一个对象，用来向外提供模块接口。
+
+  比如还是上面的代码：如下a.js里面
+define(function(require, exports) {
+    exports.a = function(){
+        // 很多代码    
+    };
+});
+ 或者如下书写：
+define(function(require, exports) {
+    return {
+              i: 'a',
+              a: function(){ 
+                   // 执行相应的代码
+              }
+        }
+});
+   那么如果我在b.js里面想要调用a.js里面的a方法，由于a.js使用exports对外提供了接口a方法，那么在b.js里面 我们只需要先这样 var fun = require('./a');然后执行fun.a();就可以执行a方法了。
+
+  -----module
+
+    module 是一个对象，上面存储了与当前模块相关联的一些属性和方法。其exports是module.exports的一个引用。
+
+  ----moudle.id : 模块的唯一标识。如下代码：
+
+define('id', [], function(require, exports, module) {
+  // 模块代码
+});
+  ----module.uri:
+  根据模块系统的路径解析规则得到的模块绝对路径。
+  define(function(require, exports, module) {
+  console.log(module.uri); 
+  // ==> http://example.com/path/to/this/file.js
+});
+等等属性 具体可以看seajs官网。原理是一样的 因为seajs也采用的是CMD规范。
+
+---------------------------------------------------------------------------------------
+  -----什么是AMD规范？
+
+如下官网代码：
+define("alpha", ["require", "exports", "beta"], function (require, exports, beta) {
+    exports.verb = function() {
+        return beta.verb();
+        //或者:
+        return require("beta").verb();
+    }
+});
+　　这里的require函数让你能够随时去依赖一个模块，即取得模块的引用，从而即使模块没有作为参数定义，也能够被使用；exports是定义的 alpha 模块的实体，在其上定义的任何属性和方法也就是alpha模块的属性和方法。通过exports.verb = ...就是为alpha模块定义了一个verb方法。例子中是简单调用了模块beta的verb方法。
+
+  其中上面的模块名称和依赖项 也可以省略，那么如果省略的话，那么我们可以称他们为匿名函数，那么同样 模块名称就是文件名称 和上面的CMD规范类似。上面的['',''] 参数代表了一组对所定义的模块来说必须的依赖项。第三个参数（'definition function'）是一个用来为你的模块执行初始化的函数。一个最简单的模块可以以如下方式定义：
+
+// 模块定义函数 
+// 依赖项（foo 和 bar）被映射为函数的参数
+define('myMoudle',['foo','bar'],function(foo,bar){
+    // 返回一个定义了模块导出接口的值
+    // （也就是我们想要导出后进行调用的功能）
+    // 在这里创建模块
+    var myModule = {
+        doStuff:function(){
+            console.log('Yay! Stuff');
+        }
+    }
+    return myModule;
+});
+
+还可以这样书写：
+// 另一个例子可以是...
+define('myModule',['math', 'graph'], function ( math, graph ) {
+
+        // 请注意这是一个和 AMD 有些许不同的模式，但用几种不同的方式
+        // 来定义模块也是可以的，因为语法在某些方面还是比较灵活的
+        return {
+            plot: function(x, y){
+                return graph.drawPie(math.randomGrid(x,y));
+            }
+        }
+    };
+});
+
+另一方面，require 则主要用来在顶层 JavaScript 文件中或须要动态读取依赖时加载代码。用法的一个实例如下：
+// 假设 'foo' 和 'bar' 是两个外部模块
+// 在本例中，这两个模块被加载后的 'exports' 被当做两个参数传递到了回调函数中
+// 所以可以像这样来访问他们
+require(['foo', 'bar'], function ( foo, bar ) {
+        // 这里写其余的代码
+        foo.doSomething();
+});
+
+动态加载的依赖项 如下代码：
+
+define(function ( require ) {
+    var isReady = false, 
+        foobar;
+ 
+    // 请注意在模块定义内部内联的 require 语句
+    require(['foo', 'bar'], function (foo, bar) {
+        isReady = true;
+        foobar = foo() + bar();
+    });
+ 
+    // 我们仍可以返回一个模块
+    return {
+        isReady: isReady,
+        foobar: foobar
+    };
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
