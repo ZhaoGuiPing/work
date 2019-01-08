@@ -1,0 +1,210 @@
+﻿-----什么是原型链?
+
+原型链是针对构造函数的，比如我先创建了一个函数，然后通过一个变量new了这个函数，那么这个被new出来的函数就会继承创建出来的那个函数的属性，然后如果我访问new出来的这个函数的某个属性，但是我并没有在这个new出来的函数中定义这个变量，那么它就会往上（向创建出它的函数中）查找，这个查找的过程就叫做原型链。
+
+　　Object ==> 构造函数1 ==> 构造函数2
+
+　　就和css中的继承一样，如果自身没有定义就会继承父元素的样式。
+
+function a(){};
+a.prototype.name = "追梦子";
+var b = new a();
+console.log(b.name); //追梦子
+
+---------------------------------------------------------------------------------------
+------继承有哪几种方式?分别是什么?
+
+    1、原型链继承
+
+核心： 将父类的实例作为子类的原型
+
+function Cat(){ 
+}
+Cat.prototype = new Animal();
+Cat.prototype.name = 'cat';
+
+//　Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.eat('fish'));
+console.log(cat.sleep());
+console.log(cat instanceof Animal); //true 
+console.log(cat instanceof Cat); //true
+
+特点：
+非常纯粹的继承关系，实例是子类的实例，也是父类的实例
+父类新增原型方法/原型属性，子类都能访问到
+简单，易于实现
+
+缺点：
+要想为子类新增属性和方法，必须要在new Animal()这样的语句之后执行，不能放到构造器中
+无法实现多继承
+来自原型对象的所有属性被所有实例共享（来自原型对象的引用属性是所有实例共享的）（详细请看附录代码： 示例1）
+创建子类实例时，无法向父类构造函数传参。
+
+    2、构造继承
+
+核心：使用父类的构造函数来增强子类实例，等于是复制父类的实例属性给子类（没用到原型）
+
+function Cat(name){
+  Animal.call(this);
+  this.name = name || 'Tom';
+}
+
+// Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.sleep());
+console.log(cat instanceof Animal); // false
+console.log(cat instanceof Cat); // true
+
+特点：
+解决了1中，子类实例共享父类引用属性的问题
+创建子类实例时，可以向父类传递参数
+可以实现多继承（call多个父类对象）
+
+缺点：
+实例并不是父类的实例，只是子类的实例
+只能继承父类的实例属性和方法，不能继承原型属性/方法
+无法实现函数复用，每个子类都有父类实例函数的副本，影响性能
+
+    3、实例继承
+
+核心：为父类实例添加新特性，作为子类实例返回
+
+function Cat(name){
+  var instance = new Animal();
+  instance.name = name || 'Tom';
+  return instance;
+}
+
+// Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.sleep());
+console.log(cat instanceof Animal); // true
+console.log(cat instanceof Cat); // false
+
+特点：
+不限制调用方式，不管是new 子类()还是子类(),返回的对象具有相同的效果
+缺点：
+实例是父类的实例，不是子类的实例
+不支持多继承
+
+    4、拷贝继承
+
+function Cat(name){
+  var animal = new Animal();
+  for(var p in animal){
+    Cat.prototype[p] = animal[p];
+  }
+  Cat.prototype.name = name || 'Tom';
+}
+
+// Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.sleep());
+console.log(cat instanceof Animal); // false
+console.log(cat instanceof Cat); // true
+
+特点：
+支持多继承
+缺点：
+效率较低，内存占用高（因为要拷贝父类的属性）
+无法获取父类不可枚举的方法（不可枚举方法，不能使用for in 访问到）
+
+    5、组合继承
+
+核心：通过调用父类构造，继承父类的属性并保留传参的优点，然后通过将父类实例作为子类原型，实现函数复用
+
+function Cat(name){
+  Animal.call(this);
+  this.name = name || 'Tom';
+}
+Cat.prototype = new Animal();
+
+// 感谢 @学无止境c 的提醒，组合继承也是需要修复构造函数指向的。
+
+Cat.prototype.constructor = Cat;
+
+// Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.sleep());
+console.log(cat instanceof Animal); // true
+console.log(cat instanceof Cat); // true
+
+特点：
+弥补了方式2的缺陷，可以继承实例属性/方法，也可以继承原型属性/方法
+既是子类的实例，也是父类的实例
+不存在引用属性共享问题
+可传参
+函数可复用
+缺点：
+调用了两次父类构造函数，生成了两份实例（子类实例将子类原型上的那份屏蔽了）
+
+   6、寄生组合继承
+
+核心：通过寄生方式，砍掉父类的实例属性，这样，在调用两次父类的构造的时候，就不会初始化两次实例方法/属性，避免的组合继承的缺点
+
+function Cat(name){
+  Animal.call(this);
+  this.name = name || 'Tom';
+}
+(function(){
+  // 创建一个没有实例方法的类
+  var Super = function(){};
+  Super.prototype = Animal.prototype;
+  //将实例作为子类的原型
+  Cat.prototype = new Super();
+})();
+
+// Test Code
+var cat = new Cat();
+console.log(cat.name);
+console.log(cat.sleep());
+console.log(cat instanceof Animal); // true
+console.log(cat instanceof Cat); //true
+
+特点：
+堪称完美
+缺点：
+实现较为复杂
+
+
+
+---------------------------------------------------------------------------------------
+-----什么是面向对象
+
+    面向对象是一种思想，是基于面向过程而言的，就是说面向对象是将功能等通过对象来实现，将功能封装进对象之中，让对象去实现具体的细节；
+    这种思想是将数据作为第一位，而方法或者说是算法作为其次，这是对数据一种优化，操作起来更加的方便，简化了过程。
+    面向对象有三大特征：封装性、继承性、多态性（Java中有多态性，js中没有）其中封装性指的是隐藏了对象的属性和实现细节，仅对外提供公共的访问方式，这样就隔离了具体的变化，便于使用，提高了复用性和安全性。
+    对于继承性，就是两种事物间存在着一定的所属关系，那么继承的类就可以从被继承的类中获得一些属性和方法；这就提高了代码的复用性。继承是作为多态的前提的。
+    多态是说父类或接口的引用指向了子类对象，这就提高了程序的扩展性，也就是说只要实现或继承了同一个接口或类，那么就可以使用父类中相应的方法，提高程序扩展性，但是多态有一点不好之处在于：父类引用不能访问子类中的成员。
+
+   特点：
+
+1：将复杂的事情简单化。
+
+2：面向对象将以前的过程中的执行者，变成了指挥者。
+
+3：面向对象这种思想是符合现在人们思考习惯的一种思想。
+
+   封装：只隐藏对象的属性和实现细节，仅对外提供公共访问方式
+
+好处：将变化隔离、便于使用、提高复用性、提高安全性
+
+原则：将不需要对外提供的内容隐藏起来；把属性隐藏，提供公共方法对其访问
+
+
+   继承：提高代码复用性；继承是多态的前提
+
+注：子类中所有的构造函数都会默认访问父类中的空参数的构造函数，默认第一行有super()；若无空参数构造函数，子类中需指定；另外，子类构造函数中可自己用this指定自身的其他构造函数。
+
+  
+ 
+
+
+--------------------- 
+
